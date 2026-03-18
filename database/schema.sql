@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS price_history (
     product_id   INTEGER     NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     price        NUMERIC(10,2) NOT NULL,
     old_price    NUMERIC(10,2),
-    discount     NUMERIC(5,2),               -- percentual, ex: 15.50
+    discount     NUMERIC(5,2),               -- percentual
     available    BOOLEAN       DEFAULT TRUE,
     collected_at TIMESTAMPTZ   DEFAULT NOW()
 );
@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS user_alerts (
     UNIQUE(user_email, product_id)  -- um alerta por produto por usuário
 );
 
--- View útil: último preço de cada produto
+-- View para último preço de cada produto
 CREATE OR REPLACE VIEW products_latest_price AS
 SELECT
     p.id,

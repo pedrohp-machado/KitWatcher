@@ -3,23 +3,20 @@ Conexão com PostgreSQL via psycopg2.
 Funções de acesso ao banco usadas pelos scrapers.
 """
 from __future__ import annotations
-
 import logging
 import os
 from contextlib import contextmanager
 from typing import Generator
-
 import psycopg2
 from psycopg2.extras import RealDictCursor
-
 from scrapers.base import ProductData
+from dotenv import load_dotenv
+
+load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 logger = logging.getLogger(__name__)
-
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-)
 
 
 @contextmanager
