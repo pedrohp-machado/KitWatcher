@@ -5,7 +5,7 @@ from typing import Generator
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://monitor:monitor@localhost:5432/monitor_camisas"
+    "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 )
 
 engine = create_engine(DATABASE_URL)

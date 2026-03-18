@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://monitor:monitor@localhost:5432/monitor_camisas",
+    "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
 )
 
 
