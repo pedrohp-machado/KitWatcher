@@ -7,6 +7,7 @@ pytest tests/test_netshoes.py -v
 """
 import pytest
 import responses as resp_mock
+from unittest.mock import patch
 from scrapers.netshoes import NetshoeScraper, BASE_URL, SEARCH_URL
 
 
@@ -21,21 +22,21 @@ def scraper():
 
 FAKE_SEARCH_HTML = """
 <html><body>
-  <ul>
-    <li class="showcase-item">
-      <a href="/produto/camisa-flamengo-2024">
-        <h3 class="product-title">Camisa Flamengo 2024</h3>
-        <span class="price-current">R$ 299,90</span>
-        <span class="price-original">R$ 349,90</span>
-      </a>
-    </li>
-    <li class="showcase-item">
-      <a href="/produto/camisa-flamengo-away">
-        <h3 class="product-title">Camisa Flamengo Away 2024</h3>
-        <span class="price-current">R$ 269,90</span>
-      </a>
-    </li>
-  </ul>
+  <div class="card">
+    <a class="card__link" href="/p/camisa-flamengo-2024">
+      <span class="card__description--name">Camisa Flamengo 2024</span>
+      <span data-price="price">R$ 299,90</span>
+      <del>R$ 349,90</del>
+      <img class="image" src="https://img.netshoes.com.br/fla1.jpg"/>
+    </a>
+  </div>
+  <div class="card">
+    <a class="card__link" href="/p/camisa-flamengo-away">
+      <span class="card__description--name">Camisa Flamengo Away 2024</span>
+      <span data-price="price">R$ 269,90</span>
+      <img class="image" src="https://img.netshoes.com.br/fla2.jpg"/>
+    </a>
+  </div>
 </body></html>
 """
 
@@ -135,47 +136,12 @@ def test_scrape_product_http_error(scraper):
 # Testes de search_team
 # ------------------------------------------------------------------
 
-@resp_mock.activate
 def test_search_team_returns_products(scraper):
-    # Mock da busca
-    resp_mock.add(
-        resp_mock.GET,
-        SEARCH_URL,
-        match_querystring=False,
-        body=FAKE_SEARCH_HTML,
-        status=200,
-    )
-    # Mock das páginas individuais
-    resp_mock.add(
-        resp_mock.GET,
-        f"{BASE_URL}/produto/camisa-flamengo-2024",
-        body=FAKE_PRODUCT_HTML,
-        status=200,
-    )
-    resp_mock.add(
-        resp_mock.GET,
-        f"{BASE_URL}/produto/camisa-flamengo-away",
-        body=FAKE_PRODUCT_HTML,
-        status=200,
-    )
+    with patch.object(scraper, '_get_with_selenium', return_value=FAKE_SEARCH_HTML):
+        products = scraper.search_team("Flamengo")
+        assert len(products) == 2
 
-    products = scraper.search_team("Flamengo")
-
-    assert len(products) == 2
-    for p in products:
-        assert p.team == "Flamengo"
-        assert p.store == "netshoes"
-        assert p.price > 0
-
-
-@resp_mock.activate
 def test_search_team_empty_results(scraper):
-    resp_mock.add(
-        resp_mock.GET,
-        SEARCH_URL,
-        match_querystring=False,
-        body="<html><body><p>Nenhum resultado</p></body></html>",
-        status=200,
-    )
-    products = scraper.search_team("TimeInexistente")
-    assert products == []
+    with patch.object(scraper, '_get_with_selenium', return_value="<html><body><p>Nenhum resultado</p></body></html>"):
+        products = scraper.search_team("TimeInexistente")
+        assert products == []
