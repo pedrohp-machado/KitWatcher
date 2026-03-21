@@ -3,4 +3,6 @@
 __pycache__/
 *.pyc
 .pytest_cache/
-backend/__pycache__/database.cpython-312.pyc
+backend/__pycache__/
+scrapers/__pycache__/
+tests/__pycache__/
