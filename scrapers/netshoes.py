@@ -7,8 +7,9 @@ Netshoes renderiza boa parte do conteúdo via HTML estático — BeautifulSoup
 from __future__ import annotations
 
 import logging
+from bs4 import BeautifulSoup
 from typing import Optional
-from urllib.parse import urlencode, urljoin
+from urllib.parse import  urljoin
 
 from bs4 import BeautifulSoup
 
@@ -28,6 +29,43 @@ class NetshoeScraper(BaseScraper):
     # Interface pública
     # ------------------------------------------------------------------
 
+    def _parse_search_results(self, html: str) -> list[ProductData]:
+        """Parseia o HTML da página de resultados de busca e retorna lista de ProductData."""
+        soup = BeautifulSoup(html, "html.parser")
+        products = []
+        for item in soup.select("div.card"):
+            try:
+                name = item.select_one(".card__description--name").get_text(strip=True)
+                url = item.select_one("a.card__link")["href"]
+                
+                price_el = item.select_one("span[data-price=\"price\"]")
+                if price_el is None:
+                    continue  # Ignora produtos sem preço válido
+                price = self._parse_price(price_el.get_text(strip=True))
+                
+                old_price_str = item.select_one("del")
+                old_price = self._parse_price(old_price_str.get_text(strip=True)) if old_price_str else None
+                
+                discount = round((old_price - price) / old_price * 100, 2) if isinstance(old_price, float) and isinstance(price, float) and old_price > price else None
+
+                image_url = item.select_one("img.image")["src"]
+                
+                products.append(ProductData(
+                    name=name,
+                    url=url,
+                    store=self.store_name,
+                    price=price,
+                    old_price=old_price,
+                    discount=discount,
+                    available=True,
+                    image_url=image_url,
+                ))
+
+            except Exception as e:
+                logger.error(f"Erro ao parsear produto na busca: {e}", exc_info=True)
+        return products
+
+
     def search_team(self, team_name: str) -> list[ProductData]:
         """
         Busca camisas de um time.
@@ -38,38 +76,19 @@ class NetshoeScraper(BaseScraper):
         Returns:
             Lista de ProductData encontrados.
 
-        Example:
-            >>> scraper = NetshoeScraper()
-            >>> products = scraper.search_team("Flamengo")
-            >>> print(products[0].price)
         """
+        
         query = f"camisa {team_name}"
-        params = {"ntt": query, "D": "camisa"}
-        url = f"{SEARCH_URL}?{urlencode(params)}"
 
-        logger.info(f"[netshoes] buscando: {query!r} → {url}")
+        url = f"https://www.netshoes.com.br/busca?nsCat=Natural&q={team_name}"
 
-        try:
-            response = self._get(url)
-        except Exception as e:
-            logger.error(f"[netshoes] falha na busca de {team_name!r}: {e}")
-            return []
+        html = self._get_with_selenium(url)
+        products = self._parse_search_results(html)
 
-        soup = BeautifulSoup(response.text, "html.parser")
-        product_cards = self._parse_search_results(soup)
-
-        logger.info(f"[netshoes] {len(product_cards)} produtos encontrados para {team_name!r}")
-
-        results = []
-        for card in product_cards:
-            if not card.get("url"):
-                continue
-            product = self.scrape_product(card["url"])
-            if product:
-                product.team = team_name
-                results.append(product)
-
-        return results
+        for p in products:
+            p.team = team_name
+        
+        return products 
 
     def scrape_product(self, url: str) -> Optional[ProductData]:
         """
@@ -92,71 +111,6 @@ class NetshoeScraper(BaseScraper):
         soup = BeautifulSoup(response.text, "html.parser")
         return self._parse_product_page(soup, full_url)
 
-    # ------------------------------------------------------------------
-    # Parsing
-    # ------------------------------------------------------------------
-
-    def _parse_search_results(self, soup: BeautifulSoup) -> list[dict]:
-        """
-        Extrai links e preços básicos da página de resultados.
-
-        A Netshoes usa classes como 'showcase-item' ou 'product-card'?
-        """
-        cards = []
-
-        # Seletor principal (atualizar se o HTML da loja mudar)
-        items = soup.select("li.showcase-item, div[class*='product-card'], div[class*='showcase']")
-
-        if not items:
-            # Fallback, tenta qualquer link de produto
-            logger.warning("[netshoes] seletor principal não encontrou itens, usando fallback")
-            items = soup.select("a[href*='/produto/']")
-
-        for item in items:
-            card = self._extract_card_data(item)
-            if card:
-                cards.append(card)
-
-        return cards
-
-    def _extract_card_data(self, element) -> Optional[dict]:
-        """Extrai dados básicos de um card de produto na listagem."""
-        try:
-            # URL do produto
-            link = element.select_one("a[href]") or element
-            href = link.get("href", "")
-            if not href:
-                return None
-
-            # Preço na listagem (pode não ter desconto ainda)
-            price_el = element.select_one(
-                "[class*='price-current'], [class*='sale-price'], "
-                "span[class*='price']:not([class*='original'])"
-            )
-            price_raw = price_el.get_text(strip=True) if price_el else ""
-
-            # Preço original (riscado)
-            old_price_el = element.select_one(
-                "[class*='price-original'], [class*='list-price'], "
-                "span[class*='old'], del"
-            )
-            old_price_raw = old_price_el.get_text(strip=True) if old_price_el else ""
-
-            # Nome do produto
-            name_el = element.select_one(
-                "[class*='product-name'], [class*='title'], h2, h3"
-            )
-            name = name_el.get_text(strip=True) if name_el else ""
-
-            return {
-                "url": href,
-                "name": name,
-                "price_raw": price_raw,
-                "old_price_raw": old_price_raw,
-            }
-        except Exception as e:
-            logger.debug(f"[netshoes] erro ao extrair card: {e}")
-            return None
 
     # ------------------------------------------------------------------
     # Parsing detalhado da página de produto

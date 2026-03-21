@@ -5,6 +5,8 @@ Define a interface comum e utilitários compartilhados.
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
+import selenium.webdriver as wd
+from selenium.webdriver.chrome.options import Options
 from typing import Optional
 import logging
 import time
@@ -98,6 +100,7 @@ class BaseScraper(ABC):
     def search_team(self, team_name: str) -> list[ProductData]:
         """Busca camisas de um time e retorna lista de produtos."""
 
+
     @abstractmethod
     def scrape_product(self, url: str) -> Optional[ProductData]:
         """Coleta dados de uma URL de produto específica."""
@@ -122,6 +125,25 @@ class BaseScraper(ABC):
         delay = random.uniform(self.delay_min, self.delay_max)
         logger.debug(f"[{self.store_name}] aguardando {delay:.1f}s")
         time.sleep(delay)
+
+    def _get_with_selenium(self, url: str) -> str:
+        """ 
+        Utiliza Selenium para obter o HTML de páginas com conteúdo dinâmico.
+        """
+        options = Options()
+        options.add_argument('--headless=new')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--window-size=1920,1080')
+        options.add_argument('--disable-blink-features=AutomationControlled')
+        options.add_experimental_option('excludeSwitches', ['enable-automation'])
+
+        driver = wd.Chrome(options=options)
+        driver.get(url)
+        time.sleep(8)
+        html = driver.page_source
+        driver.quit()
+
+        return html
 
     @staticmethod
     def _parse_price(raw: str) -> Optional[float]:
