@@ -7,12 +7,9 @@ Netshoes renderiza boa parte do conteúdo via HTML estático — BeautifulSoup
 from __future__ import annotations
 
 import logging
-from bs4 import BeautifulSoup
 from typing import Optional
 from urllib.parse import  urljoin
-
 from bs4 import BeautifulSoup
-
 from .base import BaseScraper, ProductData
 
 logger = logging.getLogger(__name__)
