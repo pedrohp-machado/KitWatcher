@@ -1,8 +1,7 @@
 """
-Scraper da Netshoes.
+Scraper da Centauro.
 
-Netshoes renderiza boa parte do conteúdo via HTML estático — BeautifulSoup
-é suficiente para a maioria dos casos sem precisar de Selenium.
+
 """
 from __future__ import annotations
 
@@ -15,11 +14,12 @@ from database.connection import save_products
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://www.netshoes.com.br"
+BASE_URL = "https://www.centauro.com.br"
+SEARCH_URL = f"{BASE_URL}/busca/"
 
-class NetshoeScraper(BaseScraper):
+class CentauroScraper(BaseScraper):
 
-    store_name = "netshoes"
+    store_name = "centauro"
 
     # ------------------------------------------------------------------
     # Interface pública
@@ -29,23 +29,24 @@ class NetshoeScraper(BaseScraper):
         """Parseia o HTML da página de resultados de busca e retorna lista de ProductData."""
         soup = BeautifulSoup(html, "html.parser")
         products = []
-        for item in soup.select("div.card"):
+        print("Parseando item de busca...")
+        for item in soup.select("div[data-testid='grid-product-card-enhanced']"):
             try:
-                name = item.select_one(".card__description--name").get_text(strip=True)
-                url = item.select_one("a.card__link")["href"]
+                name = item.select_one('[data-testid="product-name"]').get_text(strip=True)
+                url = item.select_one('.Linkstyled__Link-sc-111jz8f-0')['href']
                 
-                price_el = item.select_one("span[data-price=\"price\"]")
+                price_el = item.select_one('[data-testid="price-current"]')
                 if price_el is None:
                     continue  # Ignora produtos sem preço válido
                 price = self._parse_price(price_el.get_text(strip=True))
                 
-                old_price_str = item.select_one("del")
+                old_price_str = item.select_one('[data-testid="price-promotion"]')
                 old_price = self._parse_price(old_price_str.get_text(strip=True)) if old_price_str else None
                 
                 discount = round((old_price - price) / old_price * 100, 2) if isinstance(old_price, float) and isinstance(price, float) and old_price > price else None
 
-                image_url = item.select_one("img.image")["src"]
-                
+                image_url = item.select_one('[data-testid="product-image"]')['src'] if item.select_one('[data-testid="product-image"]') else None
+
                 products.append(ProductData(
                     name=name,
                     url=url,
@@ -76,7 +77,9 @@ class NetshoeScraper(BaseScraper):
         
         query = f"camisa {team_name}"
 
-        url = f"{BASE_URL}/busca?nsCat=Natural&q={team_name}"
+        url = f"{SEARCH_URL}{team_name}"
+
+        print(f"Buscando na url: {url}")
 
         html = self._get_with_selenium(url)
         products = self._parse_search_results(html)
@@ -87,7 +90,6 @@ class NetshoeScraper(BaseScraper):
         if products:
             save_products(products) # URL relativa intencional para evitar problemas de duplicação no banco
 
-        logger.info(f"[netshoes] encontrado {len(products)} produtos para time '{team_name}'")
         return products 
 
     def scrape_product(self, url: str) -> Optional[ProductData]:
@@ -105,7 +107,7 @@ class NetshoeScraper(BaseScraper):
         try:
             response = self._get(full_url)
         except Exception as e:
-            logger.error(f"[netshoes] erro ao acessar produto {full_url}: {e}")
+            logger.error(f"[centauro] erro ao acessar produto {full_url}: {e}")
             return None
 
         soup = BeautifulSoup(response.text, "html.parser")
@@ -127,7 +129,7 @@ class NetshoeScraper(BaseScraper):
             discount = self._calc_discount(price, old_price)
 
             if not name or price is None:
-                logger.warning(f"[netshoes] dados incompletos em {url}")
+                logger.warning(f"[centauro] dados incompletos em {url}")
                 return None
 
             return ProductData(
@@ -142,15 +144,21 @@ class NetshoeScraper(BaseScraper):
             )
 
         except Exception as e:
-            logger.error(f"[netshoes] erro ao parsear produto {url}: {e}", exc_info=True)
+            logger.error(f"[centauro] erro ao parsear produto {url}: {e}", exc_info=True)
             return None
 
     def _extract_name(self, soup: BeautifulSoup) -> str:
+        # Para o nome do produto
         selectors = [
-            "h1.product-title",
-            "h1[class*='title']",
-            "h1[class*='name']",
-            "h1",
+            '[data-testid="product-name"]',
+            'span[data-testid="product-name"]',
+            '.ProductMainInfo-styled__Name-sc-5205fe51-0',
+            'span.Typographystyled__Simple-sc-bdxvrr-5.bpucZA',
+            'span[class*="Name-sc-"]',
+            '[class*="product-name"]',
+            '.ProductMainInfo-styled__LinkWrapper-sc-5205fe51-1 span',
+            'a[class*="ProductMainInfo"] span',
+            'span[class*="Name"]'
         ]
         for sel in selectors:
             el = soup.select_one(sel)
@@ -160,11 +168,14 @@ class NetshoeScraper(BaseScraper):
 
     def _extract_price(self, soup: BeautifulSoup) -> Optional[float]:
         selectors = [
-            "[class*='sale-price']",
-            "[class*='price-current']",
-            "[class*='price-sale']",
-            "span[class*='price']:not([class*='original']):not([class*='list'])",
+            '[data-testid="price-current"]',
+            'p[data-testid="price-current"]',
+            '[class*="CurrentPrice"]',
+            '[class*="current-price"]',
+            '[class*="price-current"]',
+            '.Price-styled__Container-sc-f425a1c-0 p:first-of-type'
         ]
+
         for sel in selectors:
             el = soup.select_one(sel)
             if el:
@@ -174,13 +185,15 @@ class NetshoeScraper(BaseScraper):
         return None
 
     def _extract_old_price(self, soup: BeautifulSoup) -> Optional[float]:
+        
         selectors = [
-            "[class*='price-original']",
-            "[class*='list-price']",
-            "[class*='price-before']",
-            "del[class*='price']",
-            "span.old-price",
+            # Prioridade 1: data-testid encontrado
+            '[data-testid="price-promotion"]',
+            'del[data-testid="price-promotion"]',
+            'del',
+            'del[class*="price"]'
         ]
+
         for sel in selectors:
             el = soup.select_one(sel)
             if el:
@@ -190,18 +203,22 @@ class NetshoeScraper(BaseScraper):
         return None
 
     def _extract_image(self, soup: BeautifulSoup) -> Optional[str]:
+       
         selectors = [
-            "img.product-image",
-            "img[class*='product']",
-            "img[id*='product']",
-            ".product-gallery img",
+            '[data-testid="product-image"]',
+            'img.ProductMediaCarousel-styled__Photo-sc-c46bd70b-4',
+            '.ProductCardWithMedia-styled__ImageWrapper-sc-fcb2ef60-1 img',
+            'img[class*="Photo"]',
+            'img[class*="Image"]'
         ]
+
         for sel in selectors:
             el = soup.select_one(sel)
             if el:
                 src = el.get("data-src") or el.get("data-lazy") or el.get("src", "")
                 if src and src.startswith("http"):
                     return src
+        
         return None
 
     def _extract_availability(self, soup: BeautifulSoup) -> bool:
@@ -217,3 +234,5 @@ class NetshoeScraper(BaseScraper):
         if price and old_price and old_price > price:
             return round((1 - price / old_price) * 100, 1)
         return None
+
+
