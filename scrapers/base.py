@@ -139,7 +139,7 @@ class BaseScraper(ABC):
 
         driver = wd.Chrome(options=options)
         driver.get(url)
-        time.sleep(8)
+        time.sleep(20)
         html = driver.page_source
         driver.quit()
 

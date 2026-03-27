@@ -38,7 +38,7 @@ class CentauroScraper(BaseScraper):
                 price_el = item.select_one('[data-testid="price-current"]')
                 if price_el is None:
                     continue  # Ignora produtos sem preço válido
-                price = self._parse_price(price_el.get_text(strip=True))
+                price = self._parse_price(price_el.find(text=True, recursive=False).strip())
                 
                 old_price_str = item.select_one('[data-testid="price-promotion"]')
                 old_price = self._parse_price(old_price_str.get_text(strip=True)) if old_price_str else None
