@@ -8,7 +8,7 @@ pytest tests/test_netshoes.py -v
 import pytest
 import responses as resp_mock
 from unittest.mock import patch
-from scrapers.netshoes import NetshoeScraper, BASE_URL, SEARCH_URL
+from scrapers.netshoes import NetshoeScraper, BASE_URL
 
 
 # ------------------------------------------------------------------
