@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import unicodedata
+from urllib.parse import quote
 from typing import Optional
 from urllib.parse import urljoin
 from bs4 import BeautifulSoup
@@ -95,7 +96,7 @@ class FutFanaticsScraper(BaseScraper):
         text = u"".join([c for c in nfkd_form if not unicodedata.combining(c)])
        
         # Deixa minúsculo
-        return text.lower()
+        return quote(text.lower())
 
     def search_team(self, team_name: str) -> list[ProductData]:
         """
