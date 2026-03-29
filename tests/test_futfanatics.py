@@ -18,7 +18,7 @@ def scraper():
     return FutFanaticsScraper(delay_min=0, delay_max=0)  # sem delay nos testes
 
 
-# HTML baseado nos seletores mapeados da FutFanatics (li.apoio-sh, etc)
+# HTML Mockado da página de resultados de busca, baseado nos seletores da FutFanatics
 FAKE_SEARCH_HTML = """
 <html><body>
   <li itemtype="https://schema.org/SomeProducts">
@@ -39,7 +39,6 @@ FAKE_SEARCH_HTML = """
 </body></html>
 """
 
-# HTML da página de produto baseada nos seletores da FutFanatics
 FAKE_PRODUCT_HTML = """
 <html><body>
   <h1 class="product-name">Camisa São Paulo 2024 - New Balance</h1>
@@ -49,7 +48,6 @@ FAKE_PRODUCT_HTML = """
 </body></html>
 """
 
-# HTML de produto esgotado (usando as classes da FutFanatics)
 FAKE_UNAVAILABLE_HTML = """
 <html><body>
   <h1 class="product-name">Camisa Esgotada</h1>
@@ -60,7 +58,7 @@ FAKE_UNAVAILABLE_HTML = """
 
 
 # ------------------------------------------------------------------
-# Testes de _parse_price (Herdados da base, mas testamos via classe atual)
+# Testes de _parse_price
 # ------------------------------------------------------------------
 
 @pytest.mark.parametrize("raw,expected", [
@@ -94,7 +92,7 @@ def test_calc_discount_price_higher():
     assert FutFanaticsScraper._calc_discount(400.0, 350.0) is None
 
 # ------------------------------------------------------------------
-# Testes de scrape_product (HTTP mockado)
+# Testes de scrape_product 
 # ------------------------------------------------------------------
 
 @resp_mock.activate
@@ -127,7 +125,7 @@ def test_scrape_product_http_error(scraper):
 
 
 # ------------------------------------------------------------------
-# Testes de search_team (Selenium mockado)
+# Testes de search_team 
 # ------------------------------------------------------------------
 
 def test_search_team_returns_products(scraper):
