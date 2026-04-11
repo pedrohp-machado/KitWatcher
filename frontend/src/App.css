@@ -98,3 +98,25 @@ h1 {
     font-size: 12px;
     width: fit-content;
 }
+
+
+.filters {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 24px;
+}
+
+.filters button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    background: #3498db;
+    color: white;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.filters button:hover {
+    background: #2980b9;
+}

@@ -6,6 +6,12 @@ function Dashboard() {
     const [products, setProducts] = useState([])
     const [loading, setLoading] = useState(true)
 
+    const [filter, setFilter] = useState('todos')
+
+    const filtered = filter === 'todos'
+        ? products
+        : products.filter(p => p.store === filter)
+
     useEffect(() => {
         
         getProducts()
@@ -23,9 +29,14 @@ function Dashboard() {
 
     return (
         <div>
-            <h1>Monitor de camisas</h1>
+            <div className="filters">
+                <button onClick={() => setFilter('todos')}>Todos</button>
+                <button onClick={() => setFilter('netshoes')}>Netshoes</button>
+                <button onClick={() => setFilter('futfanatics')}>FutFanatics</button>
+            </div>
+
             <div className="products-grid">
-                {products.map(product => (
+                {filtered.map(product => (
                     <ProductCard key={product.id} product={product} />
                 ))}
             </div>
