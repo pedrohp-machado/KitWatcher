@@ -4,8 +4,16 @@ from backend.database import get_db
 from backend.models.products import Product, PriceHistory
 from backend.schemas.products import ProductOut, PriceHistoryOut
 from typing import List
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="KitWatcher")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/products", response_model=List[ProductOut])
 def get_products(db: Session = Depends(get_db)):

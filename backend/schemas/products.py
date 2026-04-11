@@ -10,6 +10,7 @@ class ProductBase(BaseModel):
     name: str
     url: str
     store: str
+    image_url: Optional[str] = None
 
 # dados que a API retorna sobre o histórico de preços de um produto
 class PriceHistoryOut(BaseModel):

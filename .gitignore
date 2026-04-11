@@ -6,3 +6,6 @@ __pycache__/
 backend/__pycache__/
 tests/__pycache__/
 scrapers/__pycache__/
+
+frontend/package-lock.json
+frontend/package.json
