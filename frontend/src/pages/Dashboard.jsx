@@ -1,16 +1,27 @@
 import { useState, useEffect } from 'react'
-import { getProducts } from '../services/api'
+import { getPriceHistory, getProducts } from '../services/api'
 import ProductCard from '../components/ProductCard'
+import PriceChart from '../components/PriceChart'
 
 function Dashboard() {
     const [products, setProducts] = useState([])
     const [loading, setLoading] = useState(true)
+
+    const [selected, setSelected] = useState(null)
+    const [history, setHistory] = useState([])
 
     const [filter, setFilter] = useState('todos')
 
     const filtered = filter === 'todos'
         ? products
         : products.filter(p => p.store === filter)
+
+    const handleSelectProduct = (product) => {
+        setSelected(product)
+        getPriceHistory(product.id)
+            .then(response => setHistory(response.data))
+            .catch(error => console.error('Erro ao buscar historico de precos: ', error))
+    }
 
     useEffect(() => {
         
@@ -35,9 +46,20 @@ function Dashboard() {
                 <button onClick={() => setFilter('futfanatics')}>FutFanatics</button>
             </div>
 
+            {selected && (
+                <div>
+                    <h2>{selected.name} - {selected.store}</h2>
+                    <PriceChart history={history} />
+                </div>
+            )}
+
             <div className="products-grid">
                 {filtered.map(product => (
-                    <ProductCard key={product.id} product={product} />
+                    <ProductCard 
+                        key={product.id} 
+                        product={product}
+                        onClick={() => handleSelectProduct(product)}
+                    />
                 ))}
             </div>
         </div>

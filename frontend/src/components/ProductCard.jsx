@@ -1,6 +1,6 @@
-function ProductCard({ product }) {
+function ProductCard({ product, onClick }) {
     return (
-        <div className="product-card">
+        <div className="product-card" onClick={onClick}>
             {!product.prices || product.prices.length === 0 ? null : (
                 <>
                     <img src={product.image_url} alt={product.name}/>
